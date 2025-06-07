@@ -1,6 +1,4 @@
 import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -8,11 +6,11 @@ import droneRoutes from './routes/droneRoutes';
 import missionRoutes from './routes/missionRoutes';
 import reportRoutes from './routes/reportRoutes';
 
+
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const httpServer = createServer(app);
 
 // CORS configuration
 const corsOptions = {
@@ -22,17 +20,17 @@ const corsOptions = {
   credentials: true
 };
 
-const io = new Server(httpServer, {
-  cors: corsOptions
-});
-
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Request logging middleware
+// Basic request logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.url}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Request Body:', req.body);
+  }
   next();
 });
 
@@ -40,15 +38,6 @@ app.use((req, res, next) => {
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/drone-survey')
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('MongoDB connection error:', err));
-
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
 
 // API routes
 app.use('/api/drones', droneRoutes);
@@ -73,6 +62,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // Start server
 const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 
