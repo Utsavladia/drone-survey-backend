@@ -54,7 +54,9 @@ function startSimulationUpdates() {
             latitude: simulation.currentPosition.lat,
             longitude: simulation.currentPosition.lng,
             batteryLevel: simulation.batteryLevel,
-            timestamp: new Date()
+            timestamp: new Date(),
+            progress: simulation.progress,
+            estimatedTimeRemaining: simulation.estimatedTimeRemaining
           }
         });
       }

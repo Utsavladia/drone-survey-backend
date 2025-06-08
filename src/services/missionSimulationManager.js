@@ -58,6 +58,17 @@ function startSimulation(missionRunId, waypoints) {
         throw new Error('Simulation already exists for this mission run');
     }
 
+    // Calculate total path distance
+    let totalPathDistance = 0;
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        totalPathDistance += calculateDistance(
+            waypoints[i].lat,
+            waypoints[i].lng,
+            waypoints[i + 1].lat,
+            waypoints[i + 1].lng
+        );
+    }
+
     // Initialize simulation state
     const simulationState = {
         waypoints,
@@ -67,15 +78,18 @@ function startSimulation(missionRunId, waypoints) {
         progress: 0,
         currentPosition: { ...waypoints[0] },
         intervalId: null,
-        batteryLevel: 100, // Initial battery level in percentage
-        batteryDrainRate: 0.02 // Battery drain per second in percentage
+        batteryLevel: 100,
+        batteryDrainRate: 0.02,
+        estimatedTimeRemaining: 0,
+        totalPathDistance,
+        distanceTraveled: 0
     };
 
     // Add to active simulations
     activeSimulations.set(missionRunId, simulationState);
 
     // Start simulation interval
-    simulationState.intervalId = setInterval(() => {
+    simulationState.intervalId = setInterval(async () => {
         const state = activeSimulations.get(missionRunId);
         if (!state || state.status !== 'running') {
             return;
@@ -84,13 +98,48 @@ function startSimulation(missionRunId, waypoints) {
         // Update battery level
         state.batteryLevel = Math.max(0, state.batteryLevel - state.batteryDrainRate);
 
+        // Calculate distance traveled in current segment
+        const currentWaypoint = waypoints[state.currentIndex];
+        const nextWaypoint = waypoints[state.currentIndex + 1];
+        const distanceToNext = calculateDistance(
+            state.currentPosition.lat,
+            state.currentPosition.lng,
+            nextWaypoint.lat,
+            nextWaypoint.lng
+        );
+        const segmentDistance = calculateDistance(
+            currentWaypoint.lat,
+            currentWaypoint.lng,
+            nextWaypoint.lat,
+            nextWaypoint.lng
+        );
+        const segmentProgress = 1 - (distanceToNext / segmentDistance);
+        
+        // Calculate total progress including completed segments
+        let completedDistance = 0;
+        for (let i = 0; i < state.currentIndex; i++) {
+            completedDistance += calculateDistance(
+                waypoints[i].lat,
+                waypoints[i].lng,
+                waypoints[i + 1].lat,
+                waypoints[i + 1].lng
+            );
+        }
+        
+        // Add current segment progress
+        state.distanceTraveled = completedDistance + (segmentProgress * segmentDistance);
+        state.progress = Math.round((state.distanceTraveled / state.totalPathDistance) * 100);
+
+        // Calculate estimated time remaining
+        const elapsedTime = (Date.now() - state.startedAt) / 1000; // in seconds
+        const remainingDistance = state.totalPathDistance - state.distanceTraveled;
+        const averageSpeed = state.distanceTraveled / elapsedTime; // meters per second
+        state.estimatedTimeRemaining = Math.round(remainingDistance / averageSpeed);
+
         // Check if battery is depleted
         if (state.batteryLevel <= 0) {
             state.status = 'failed';
-            state.progress = Math.round((state.currentIndex / (waypoints.length - 1)) * 100);
             clearInterval(state.intervalId);
-            
-            // Update mission run status in database
             updateMissionRunStatus(missionRunId, 'failed');
             return;
         }
@@ -99,27 +148,15 @@ function startSimulation(missionRunId, waypoints) {
         if (state.currentIndex >= waypoints.length - 1) {
             state.status = 'completed';
             state.progress = 100;
+            state.estimatedTimeRemaining = 0;
             state.currentPosition = { ...waypoints[waypoints.length - 1] };
             clearInterval(state.intervalId);
-            
-            // Update mission run status in database
             updateMissionRunStatus(missionRunId, 'completed');
             return;
         }
 
-        // Calculate movement to next waypoint
-        const currentWaypoint = waypoints[state.currentIndex];
-        const nextWaypoint = waypoints[state.currentIndex + 1];
-        
         // Move 1% of the distance to next waypoint each second
-        const distance = calculateDistance(
-            currentWaypoint.lat,
-            currentWaypoint.lng,
-            nextWaypoint.lat,
-            nextWaypoint.lng
-        );
-        
-        const stepSize = distance * 0.01; // 1% of total distance
+        const stepSize = segmentDistance * 0.01; // 1% of segment distance
         
         // Update position
         const latDiff = nextWaypoint.lat - currentWaypoint.lat;
@@ -129,21 +166,11 @@ function startSimulation(missionRunId, waypoints) {
         state.currentPosition.lng += lngDiff * 0.01;
 
         // Check if we've reached the next waypoint
-        const distanceToNext = calculateDistance(
-            state.currentPosition.lat,
-            state.currentPosition.lng,
-            nextWaypoint.lat,
-            nextWaypoint.lng
-        );
-
         if (distanceToNext < stepSize) {
             state.currentIndex++;
             state.currentPosition = { ...nextWaypoint };
         }
-
-        // Update progress
-        state.progress = Math.round((state.currentIndex / (waypoints.length - 1)) * 100);
-    }, 1000);
+    }, 2000);
 
     return simulationState;
 }

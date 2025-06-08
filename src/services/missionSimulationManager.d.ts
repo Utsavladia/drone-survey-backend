@@ -13,6 +13,7 @@ interface SimulationState {
   intervalId: NodeJS.Timeout | null;
   batteryLevel: number;
   batteryDrainRate: number;
+  estimatedTimeRemaining: number;
 }
 
 declare const activeSimulations: Map<string, SimulationState>;
