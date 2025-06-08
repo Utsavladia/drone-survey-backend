@@ -53,6 +53,7 @@ function startSimulationUpdates() {
           location: {
             latitude: simulation.currentPosition.lat,
             longitude: simulation.currentPosition.lng,
+            batteryLevel: simulation.batteryLevel,
             timestamp: new Date()
           }
         });

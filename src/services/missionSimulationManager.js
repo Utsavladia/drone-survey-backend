@@ -66,7 +66,9 @@ function startSimulation(missionRunId, waypoints) {
         startedAt: Date.now(),
         progress: 0,
         currentPosition: { ...waypoints[0] },
-        intervalId: null
+        intervalId: null,
+        batteryLevel: 100, // Initial battery level in percentage
+        batteryDrainRate: 0.02 // Battery drain per second in percentage
     };
 
     // Add to active simulations
@@ -76,6 +78,20 @@ function startSimulation(missionRunId, waypoints) {
     simulationState.intervalId = setInterval(() => {
         const state = activeSimulations.get(missionRunId);
         if (!state || state.status !== 'running') {
+            return;
+        }
+
+        // Update battery level
+        state.batteryLevel = Math.max(0, state.batteryLevel - state.batteryDrainRate);
+
+        // Check if battery is depleted
+        if (state.batteryLevel <= 0) {
+            state.status = 'failed';
+            state.progress = Math.round((state.currentIndex / (waypoints.length - 1)) * 100);
+            clearInterval(state.intervalId);
+            
+            // Update mission run status in database
+            updateMissionRunStatus(missionRunId, 'failed');
             return;
         }
 
