@@ -15,6 +15,7 @@ const router = express.Router();
 
 // Specific routes first
 router.get('/running', missionRunController.getRunningMissions);
+router.get('/history', missionRunController.getMissionHistory);
 router.get('/current/:droneId', getCurrentMission);
 
 // Parameterized routes last

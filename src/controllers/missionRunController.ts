@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { MissionRun } from '../models/MissionRun';
 import Mission from '../models/Mission';
+import { startSimulation, activeSimulations } from '../services/missionSimulationManager';
 
 export class MissionRunController {
   startMissionRun = async (req: Request, res: Response): Promise<void> => {
@@ -51,6 +52,19 @@ export class MissionRunController {
       await missionRun.save();
       console.log('Backend: Mission run created successfully:', missionRun._id);
 
+      // Start the mission simulation
+      try {
+        const waypoints = mission.flightPath.map(point => ({
+          lat: point.lat,
+          lng: point.lng
+        }));
+        startSimulation(missionRun._id.toString(), waypoints);
+        console.log('Backend: Mission simulation started for run:', missionRun._id);
+      } catch (simError) {
+        console.error('Backend: Error starting mission simulation:', simError);
+        // Don't fail the mission run if simulation fails
+      }
+
       res.status(201).json({
         success: true,
         data: missionRun
@@ -75,7 +89,20 @@ export class MissionRunController {
 
       console.log('Backend: Database query completed, found missions:', runningMissions.length);
       
-      if (!runningMissions) {
+      // Enhance running missions with simulation data
+      const enhancedMissions = runningMissions.map(mission => {
+        const simulation = activeSimulations.get(mission._id.toString());
+        return {
+          ...mission,
+          simulation: simulation ? {
+            progress: simulation.progress,
+            currentPosition: simulation.currentPosition,
+            status: simulation.status
+          } : null
+        };
+      });
+
+      if (!enhancedMissions) {
         console.log('Backend: No running missions found');
         res.status(200).json({
           success: true,
@@ -86,7 +113,7 @@ export class MissionRunController {
 
       res.status(200).json({
         success: true,
-        data: runningMissions
+        data: enhancedMissions
       });
     } catch (error) {
       console.error('Backend: Detailed error in getRunningMissions:', {
@@ -95,6 +122,32 @@ export class MissionRunController {
         name: error instanceof Error ? error.name : 'Unknown error type'
       });
       
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error'
+      });
+    }
+  };
+
+  getMissionHistory = async (req: Request, res: Response): Promise<void> => {
+    try {
+      console.log('Backend: Fetching mission history');
+      
+      const historyMissions = await MissionRun.find({
+        status: { $in: ['completed', 'failed'] }
+      })
+        .populate('drone_id', 'name status')
+        .sort({ completed_at: -1 })
+        .lean();
+
+      console.log('Backend: Found historical missions:', historyMissions.length);
+
+      res.status(200).json({
+        success: true,
+        data: historyMissions
+      });
+    } catch (error) {
+      console.error('Backend: Error fetching mission history:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Internal server error'
