@@ -4,12 +4,14 @@ import {
   getDroneById,
   createDrone,
   updateDrone,
-  deleteDrone
+  deleteDrone,
+  getAvailableDrones
 } from '../controllers/droneController';
 
 const router = express.Router();
 
 router.get('/', getAllDrones);
+router.get('/available', getAvailableDrones);
 router.get('/:id', getDroneById);
 router.post('/', createDrone);
 router.put('/:id', updateDrone);

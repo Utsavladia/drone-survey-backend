@@ -7,6 +7,9 @@ import {
   deleteMission,
   getCurrentMission
 } from '../controllers/missionController';
+import { MissionRunController } from '../controllers/missionRunController';
+
+const missionRunController = new MissionRunController();
 
 const router = express.Router();
 
@@ -17,4 +20,7 @@ router.put('/:id', updateMission);
 router.delete('/:id', deleteMission);
 router.get('/current/:droneId', getCurrentMission);
 
+
+
+router.post('/:id/run', missionRunController.startMissionRun);
 export default router; 

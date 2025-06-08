@@ -6,7 +6,6 @@ import droneRoutes from './routes/droneRoutes';
 import missionRoutes from './routes/missionRoutes';
 import reportRoutes from './routes/reportRoutes';
 
-
 // Load environment variables
 dotenv.config();
 

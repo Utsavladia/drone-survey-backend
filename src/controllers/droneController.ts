@@ -58,4 +58,16 @@ export const deleteDrone = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ message: 'Error deleting drone', error });
   }
+};
+
+export const getAvailableDrones = async (req: Request, res: Response) => {
+  try {
+    const drones = await Drone.find({ 
+      status: 'available',
+      batteryLevel: { $gt: 20 } // Only return drones with sufficient battery
+    });
+    res.json(drones);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching available drones', error });
+  }
 }; 
