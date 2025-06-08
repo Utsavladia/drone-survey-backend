@@ -33,34 +33,57 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MissionRun = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const missionSchema = new mongoose_1.Schema({
-    name: { type: String, required: true },
-    description: { type: String, required: true },
+const MissionRunSchema = new mongoose_1.Schema({
+    mission_id: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'Mission',
+        required: true
+    },
+    drone_id: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'Drone',
+        required: true
+    },
     status: {
         type: String,
-        enum: ['planned', 'in-progress', 'completed', 'aborted'],
-        default: 'planned'
+        enum: ['in_progress', 'completed', 'failed'],
+        default: 'in_progress'
     },
-    flightPath: [{
-            lat: { type: Number, required: true },
-            lng: { type: Number, required: true },
-            altitude: { type: Number, required: true }
-        }],
-    site: { type: String, required: true },
-    pattern: {
-        type: String,
-        enum: ['perimeter', 'crosshatch', 'custom'],
-        default: 'perimeter'
+    started_at: {
+        type: Date,
+        default: Date.now
     },
-    parameters: {
-        altitude: { type: Number, required: true },
-        overlap: { type: Number, required: true },
-        frequency: { type: Number, required: true },
-        sensors: [{ type: String }]
+    completed_at: {
+        type: Date
     },
-    assignedDrone: { type: mongoose_1.default.Schema.Types.ObjectId, ref: 'Drone', required: true }
+    missionSnapshot: {
+        name: { type: String, required: true },
+        description: { type: String, required: false },
+        flightPath: [{
+                lat: { type: Number, required: true },
+                lng: { type: Number, required: true },
+                altitude: { type: Number, required: true }
+            }],
+        site: { type: String, required: true },
+        pattern: {
+            type: String,
+            enum: ['perimeter', 'crosshatch', 'custom'],
+            required: true
+        },
+        parameters: {
+            altitude: { type: Number, required: true },
+            overlap: { type: Number, required: true },
+            frequency: { type: Number, required: true },
+            sensors: [{ type: String }]
+        }
+    }
 }, {
     timestamps: true
 });
-exports.default = mongoose_1.default.model('Mission', missionSchema);
+// Add indexes for better query performance
+MissionRunSchema.index({ status: 1, started_at: -1 });
+MissionRunSchema.index({ mission_id: 1 });
+MissionRunSchema.index({ drone_id: 1 });
+exports.MissionRun = mongoose_1.default.model('MissionRun', MissionRunSchema);

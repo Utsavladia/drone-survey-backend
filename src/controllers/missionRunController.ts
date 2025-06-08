@@ -8,11 +8,11 @@ export class MissionRunController {
     try {
       const { droneId } = req.body;
       const missionId = req.params.id;
-      console.log('missionId', missionId);
-      console.log('droneId', droneId);
+      console.log('Backend: Starting mission run - missionId:', missionId, 'droneId:', droneId);
 
       // Validate IDs
       if (!missionId || !droneId || !mongoose.Types.ObjectId.isValid(missionId) || !mongoose.Types.ObjectId.isValid(droneId)) {
+        console.log('Backend: Invalid IDs provided');
         res.status(400).json({
           success: false,
           error: 'Missing required fields: missionId and droneId'
@@ -23,6 +23,7 @@ export class MissionRunController {
       // Fetch mission details
       const mission = await Mission.findById(missionId);
       if (!mission) {
+        console.log('Backend: Mission not found');
         res.status(404).json({
           success: false,
           error: 'Mission not found'
@@ -48,13 +49,52 @@ export class MissionRunController {
 
       // Save the mission run
       await missionRun.save();
+      console.log('Backend: Mission run created successfully:', missionRun._id);
 
       res.status(201).json({
         success: true,
         data: missionRun
       });
     } catch (error) {
-      console.error('Error starting mission run:', error);
+      console.error('Backend: Error starting mission run:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error'
+      });
+    }
+  };
+
+  getRunningMissions = async (req: Request, res: Response): Promise<void> => {
+    console.log('Backend: getRunningMissions function started');
+    try {
+      console.log('Backend: About to query database for running missions');
+      const runningMissions = await MissionRun.find({ status: 'in_progress' })
+        .populate('drone_id', 'name status')
+        .sort({ started_at: -1 })
+        .lean();
+
+      console.log('Backend: Database query completed, found missions:', runningMissions.length);
+      
+      if (!runningMissions) {
+        console.log('Backend: No running missions found');
+        res.status(200).json({
+          success: true,
+          data: []
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: runningMissions
+      });
+    } catch (error) {
+      console.error('Backend: Detailed error in getRunningMissions:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : 'Unknown error type'
+      });
+      
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Internal server error'

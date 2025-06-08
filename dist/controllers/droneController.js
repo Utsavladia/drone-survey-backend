@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteDrone = exports.updateDrone = exports.createDrone = exports.getDroneById = exports.getAllDrones = void 0;
+exports.getAvailableDrones = exports.deleteDrone = exports.updateDrone = exports.createDrone = exports.getDroneById = exports.getAllDrones = void 0;
 const Drone_1 = __importDefault(require("../models/Drone"));
 const getAllDrones = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -74,3 +74,16 @@ const deleteDrone = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.deleteDrone = deleteDrone;
+const getAvailableDrones = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const drones = yield Drone_1.default.find({
+            status: 'available',
+            batteryLevel: { $gt: 20 } // Only return drones with sufficient battery
+        });
+        res.json(drones);
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Error fetching available drones', error });
+    }
+});
+exports.getAvailableDrones = getAvailableDrones;

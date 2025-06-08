@@ -71,6 +71,13 @@ const MissionRunSchema = new Schema<IMissionRun>({
       sensors: [{ type: String }]
     }
   }
+}, {
+  timestamps: true
 });
+
+// Add indexes for better query performance
+MissionRunSchema.index({ status: 1, started_at: -1 });
+MissionRunSchema.index({ mission_id: 1 });
+MissionRunSchema.index({ drone_id: 1 });
 
 export const MissionRun = mongoose.model<IMissionRun>('MissionRun', MissionRunSchema); 

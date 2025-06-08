@@ -10,7 +10,6 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const droneRoutes_1 = __importDefault(require("./routes/droneRoutes"));
 const missionRoutes_1 = __importDefault(require("./routes/missionRoutes"));
 const reportRoutes_1 = __importDefault(require("./routes/reportRoutes"));
-console.log('Starting server initialization...');
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -34,7 +33,6 @@ app.use((req, res, next) => {
     next();
 });
 // Database connection
-console.log('Connecting to MongoDB...');
 mongoose_1.default.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/drone-survey')
     .then(() => console.log('Connected to MongoDB'))
     .catch((err) => console.error('MongoDB connection error:', err));
