@@ -98,9 +98,29 @@ function startSimulation(missionRunId, waypoints) {
         // Update battery level
         state.batteryLevel = Math.max(0, state.batteryLevel - state.batteryDrainRate);
 
+        // If we've reached the last waypoint
+        if (state.currentIndex >= waypoints.length - 1) {
+            state.status = 'completed';
+            state.progress = 100;
+            state.estimatedTimeRemaining = 0;
+            state.currentPosition = { ...waypoints[waypoints.length - 1] };
+            clearInterval(state.intervalId);
+            updateMissionRunStatus(missionRunId, 'completed');
+            return;
+        }
+
         // Calculate distance traveled in current segment
         const currentWaypoint = waypoints[state.currentIndex];
         const nextWaypoint = waypoints[state.currentIndex + 1];
+        
+        if (!currentWaypoint || !nextWaypoint) {
+            console.error('Invalid waypoint data:', { currentIndex: state.currentIndex, waypoints });
+            state.status = 'failed';
+            clearInterval(state.intervalId);
+            updateMissionRunStatus(missionRunId, 'failed');
+            return;
+        }
+
         const distanceToNext = calculateDistance(
             state.currentPosition.lat,
             state.currentPosition.lng,
@@ -118,12 +138,14 @@ function startSimulation(missionRunId, waypoints) {
         // Calculate total progress including completed segments
         let completedDistance = 0;
         for (let i = 0; i < state.currentIndex; i++) {
-            completedDistance += calculateDistance(
-                waypoints[i].lat,
-                waypoints[i].lng,
-                waypoints[i + 1].lat,
-                waypoints[i + 1].lng
-            );
+            if (waypoints[i] && waypoints[i + 1]) {
+                completedDistance += calculateDistance(
+                    waypoints[i].lat,
+                    waypoints[i].lng,
+                    waypoints[i + 1].lat,
+                    waypoints[i + 1].lng
+                );
+            }
         }
         
         // Add current segment progress
@@ -141,17 +163,6 @@ function startSimulation(missionRunId, waypoints) {
             state.status = 'failed';
             clearInterval(state.intervalId);
             updateMissionRunStatus(missionRunId, 'failed');
-            return;
-        }
-
-        // If we've reached the last waypoint
-        if (state.currentIndex >= waypoints.length - 1) {
-            state.status = 'completed';
-            state.progress = 100;
-            state.estimatedTimeRemaining = 0;
-            state.currentPosition = { ...waypoints[waypoints.length - 1] };
-            clearInterval(state.intervalId);
-            updateMissionRunStatus(missionRunId, 'completed');
             return;
         }
 

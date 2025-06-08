@@ -34,7 +34,7 @@ const validateMissionData = (data: any): ValidationError[] => {
 
 export const getAllMissions = async (req: Request, res: Response) => {
   try {
-    const missions = await Mission.find();
+    const missions = await Mission.find().sort({ createdAt: -1 });
     res.json(missions);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch missions' });
