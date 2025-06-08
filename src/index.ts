@@ -2,6 +2,8 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
+import { initSocket } from './socket/socket';
 import droneRoutes from './routes/droneRoutes';
 import missionRoutes from './routes/missionRoutes';
 import reportRoutes from './routes/reportRoutes';
@@ -10,6 +12,10 @@ import reportRoutes from './routes/reportRoutes';
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.IO
+initSocket(httpServer);
 
 // CORS configuration
 const corsOptions = {
@@ -61,6 +67,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 
